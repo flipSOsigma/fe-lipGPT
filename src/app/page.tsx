@@ -56,7 +56,7 @@ export default function Home() {
     // }, 100);
 
     try {
-      const route = process.env.API_ROUTE + "ai"
+      const route = process.env.NEXT_PUBLIC_API_ROUTE + "ai"
       const lifGPTResponse = await fetch(route, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
