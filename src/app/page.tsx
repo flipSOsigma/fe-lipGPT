@@ -55,12 +55,12 @@ export default function Home() {
     //   window.scrollTo({ top: 0, behavior: 'smooth' });
     // }, 100);
 
-    // const route = process.env.NEXT_PUBLIC_AI_API_ROUTE
     // console.log(route);
     
+    const route = process.env.NEXT_PUBLIC_AI_API_ROUTE
     try {
-      // const route = process.env.NEXT_PUBLIC_AI_API_ROUTE
-      const lifGPTResponse = await fetch('https://lip-gpt.vercel.app/ai', {
+      const lifGPTResponse = await fetch(route + 'ai', {
+      // const lifGPTResponse = await fetch('http://localhost:2000/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: text })
