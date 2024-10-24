@@ -1,101 +1,151 @@
-import Image from "next/image";
+'use client';
+import { useState } from "react";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  interface ArrayText {
+    msg: string;
+    time: string;
+    sender: 'user' | 'lifGPT'; // to distinguish between user and GPT
+  }
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // State to store messages
+  const [myText, setMyText] = useState<ArrayText[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [inputValue, setInputValue] = useState('')
+
+  const formatWhatsAppText = (text: string) => {
+    const lines = text.split('\n').map(line => {
+      if (line.startsWith('* ')) {
+        return `<li style="list-style-type: disc; margin: 0;">${line.substring(2).trim()}</li>`; // Convert to list item
+      }
+      return line;
+    });
+
+    // Join lines back into a single string for further formatting
+    text = lines.join('<br />');
+    text = text.replace(/\*(.*?)\*/g, (match, p1) => `<strong>${p1}</strong><br>`);
+    text = text.replace(/_(.*?)_/g, (match, p1) => `<em>${p1}</em>`);
+    text = text.replace(/~(.*?)~/g, (match, p1) => `<del>${p1}</del>`);
+    text = text.replace(/```(.*?)```/g, (match, p1) => `<code>${p1}</code>`);
+    return text;
+    
+  };
+
+  const handleForm = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const text = formData.get('text')?.toString() ?? '';
+
+    if (!text) return;
+
+    const date = new Date();
+    const hour = date.getHours().toString().padStart(2, '0'); // Add leading zero
+    const minute = date.getMinutes().toString().padStart(2, '0');
+    const time = `${hour}:${minute}`;
+
+    // Add user message to chat
+    setMyText((prevMessages) => [
+      ...prevMessages,
+      { msg: formatWhatsAppText(text), time, sender: 'user' } // Format text before adding
+    ]);
+    setLoading(true);
+    setError(null);
+    // setTimeout(() => {
+    //   window.scrollTo({ top: 0, behavior: 'smooth' });
+    // }, 100);
+
+    try {
+      const lifGPTResponse = await fetch('http://localhost:2000/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: text })
+      });
+
+      if (!lifGPTResponse.ok) {
+        throw new Error('Failed to fetch response');
+      }
+
+      const lifGPTResponseJson = await lifGPTResponse.json();
+
+      // Add GPT message to chat
+      setMyText((prevMessages) => [
+        ...prevMessages,
+        { msg: formatWhatsAppText(lifGPTResponseJson.response), time, sender: 'lifGPT' } // Format GPT response
+      ]);
+    } catch (error) {
+      console.log("Failed to fetch GPT response:", error);
+      setError('Error fetching GPT response');
+    } finally {
+      setLoading(false);
+      setInputValue('');
+    }
+  };
+
+  return (
+    <div className="w-full flex justify-center text-black items-center min-h-screen bg-white">
+      <div className="w-full container h-full flex flex-col justify-end py-20">
+        
+        {/* Chat Bubbles */}
+        <div className="flex flex-col w-full min-h-screen items-end justify-end pb-24 gap-4" id="column">
+          {myText.map((message, index) => (
+            <div key={index} className="w-full flex flex-col gap-2">
+              {message.sender === 'user' ? (
+                // User message (left side)
+                <div className="w-full flex justify-start">
+                  <div className="neo max-w-sm md:max-w-lg xl:max-w-2xl flex flex-col gap-2 rounded-md rounded-tl-none bg-yellow-300">
+                    <p className="text-sm" dangerouslySetInnerHTML={{ __html: message.msg }} />
+                    <i className="text-xs text-end text-gray-500">{message.time}</i>
+                  </div>
+                </div>
+              ) : (
+                // lifGPT message (right side)
+                <div className="w-full flex justify-end">
+                  <div className="neo max-w-sm md:max-w-lg xl:max-w-2xl flex flex-col gap-2 rounded-md rounded-tr-none bg-blue-300">
+                    <h1 className="text-md font-bold">lifGPT</h1>
+                    <p className="text-sm" dangerouslySetInnerHTML={{ __html: message.msg }} />
+                    <i className="text-xs text-end text-gray-500">{message.time}</i>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Show a loading message while waiting for GPT response */}
+          {loading && (
+            <div className="w-full flex justify-end">
+              <div className="neo max-w-sm flex flex-col gap-2 rounded-md rounded-tr-none bg-gray-300">
+                <p className="text-sm italic">lifGPT is typing...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Show error message if there's an issue */}
+          {error && (
+            <div className="w-full flex justify-center">
+              <div className="neo max-w-sm flex flex-col gap-2 rounded-md rounded-tr-none bg-red-300">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      </div>
+      <div className="w-full container flex flex-col items-center justify-between py-20 fixed bottom-0">
+        <form onSubmit={handleForm} className="w-full flex gap-2 " method="post">
+          <input
+            type="text"
+            name="text"
+            autoComplete="off"
+            className="w-full rounded-md border neo text-black outline-none"
+            placeholder="Ask me anything"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <button type="submit" className="neo-default bg-yellow-300 rounded-md active:neo">
+            Send
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
