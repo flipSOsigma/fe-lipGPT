@@ -55,9 +55,12 @@ export default function Home() {
     //   window.scrollTo({ top: 0, behavior: 'smooth' });
     // }, 100);
 
+    const route = process.env.AI_API_ROUTE
+    console.log(route);
+    
     try {
-      // const route = process.env.AI_API_ROUTE
-      const lifGPTResponse = await fetch('https://be-lip-gpt.vercel.app/ai', {
+      const route = process.env.AI_API_ROUTE
+      const lifGPTResponse = await fetch(route + 'ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: text })
