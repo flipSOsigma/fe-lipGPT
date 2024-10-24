@@ -56,8 +56,8 @@ export default function Home() {
     // }, 100);
 
     try {
-      const route = process.env.NEXT_PUBLIC_API_ROUTE + "ai"
-      const lifGPTResponse = await fetch(route, {
+      // const route = process.env.AI_API_ROUTE
+      const lifGPTResponse = await fetch('https://be-lip-gpt.vercel.app/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: text })
