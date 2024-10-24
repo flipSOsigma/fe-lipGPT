@@ -55,7 +55,7 @@ export default function Home() {
     //   window.scrollTo({ top: 0, behavior: 'smooth' });
     // }, 100);
 
-    const route = process.env.AI_API_ROUTE
+    const route = process.env.NEXT_PUBLIC_AI_API_ROUTE
     console.log(route);
     
     try {
